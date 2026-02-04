@@ -241,3 +241,142 @@ class SynologyClient:
             version=1,
             params={"limit": limit, "filter": {"log_type": "system"}},
         )
+
+    # ========== Package APIs ==========
+
+    async def get_installed_packages(self) -> dict[str, Any]:
+        """Get list of installed packages."""
+        return await self.request(
+            api="SYNO.Core.Package",
+            method="list",
+            version=1,
+        )
+
+    async def get_available_packages(self) -> dict[str, Any]:
+        """Get list of available packages from server."""
+        return await self.request(
+            api="SYNO.Core.Package.Server",
+            method="list",
+            version=2,
+            params={"blforcereload": True},
+        )
+
+    async def get_package_updates(self) -> list[dict[str, Any]]:
+        """Get list of packages with available updates."""
+        installed = await self.get_installed_packages()
+        available = await self.get_available_packages()
+
+        installed_map = {p["id"]: p for p in installed.get("packages", [])}
+        updates = []
+
+        for pkg in available.get("packages", []):
+            pkg_id = pkg.get("id")
+            if pkg_id in installed_map:
+                installed_ver = installed_map[pkg_id].get("version", "")
+                server_ver = pkg.get("version", "")
+                if server_ver != installed_ver:
+                    updates.append({
+                        "id": pkg_id,
+                        "name": pkg.get("name") or pkg.get("dname") or pkg_id,
+                        "installed_version": installed_ver,
+                        "available_version": server_ver,
+                    })
+
+        return updates
+
+    async def upgrade_package(self, package_id: str) -> dict[str, Any]:
+        """Upgrade a specific package to the latest version.
+
+        This method downloads the SPK file from Synology's server and uploads
+        it to the NAS for installation.
+        """
+        import httpx
+
+        # Get package info from server to find download URL
+        available = await self.get_available_packages()
+        pkg_info = None
+        for pkg in available.get("packages", []):
+            if pkg.get("id") == package_id:
+                pkg_info = pkg
+                break
+
+        if not pkg_info:
+            raise SynologyAPIError(0, f"Package {package_id} not found on server")
+
+        spk_url = pkg_info.get("link")
+        if not spk_url:
+            raise SynologyAPIError(0, f"No download URL for package {package_id}")
+
+        # Download SPK file
+        async with httpx.AsyncClient(verify=False, timeout=300.0, follow_redirects=True) as http:
+            response = await http.get(spk_url)
+            spk_data = response.content
+
+        if len(spk_data) < 100000:
+            raise SynologyAPIError(0, f"Download failed for {package_id}")
+
+        # Upload SPK to NAS
+        if self._client is None:
+            raise SynologyAPIError(0, "Client not connected")
+
+        files = {
+            'file': (f'{package_id}.spk', spk_data, 'application/octet-stream'),
+        }
+        data = {
+            'api': 'SYNO.Core.Package.Installation',
+            'method': 'upload',
+            'version': '1',
+        }
+        if self._sid:
+            data['_sid'] = self._sid
+
+        response = await self._client.post(
+            "/webapi/entry.cgi",
+            files=files,
+            data=data,
+        )
+        result = response.json()
+
+        if not result.get("success"):
+            error = result.get("error", {})
+            raise SynologyAPIError(error.get("code", 0), f"Upload failed: {error}")
+
+        task_id = result.get("data", {}).get("task_id")
+
+        # Install the uploaded package
+        install_result = await self.request(
+            api="SYNO.Core.Package.Installation",
+            method="install",
+            version=1,
+            params={"task_id": task_id},
+        )
+
+        return {
+            "package_id": package_id,
+            "name": pkg_info.get("name", package_id),
+            "version": pkg_info.get("version"),
+            "task_id": task_id,
+            "install_result": install_result,
+        }
+
+    async def upgrade_all_packages(self) -> list[dict[str, Any]]:
+        """Upgrade all packages with available updates."""
+        updates = await self.get_package_updates()
+        results = []
+        for pkg in updates:
+            try:
+                result = await self.upgrade_package(pkg["id"])
+                results.append({
+                    "id": pkg["id"],
+                    "name": pkg["name"],
+                    "success": True,
+                    "result": result,
+                })
+            except Exception as e:
+                results.append({
+                    "id": pkg["id"],
+                    "name": pkg["name"],
+                    "success": False,
+                    "error": str(e),
+                })
+        return results
