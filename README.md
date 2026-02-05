@@ -8,6 +8,17 @@ Synology Guru is an automated monitoring solution that uses specialized agents t
 
 ## Features
 
+### Multi-NAS Support
+
+Monitor and manage multiple NAS devices from a single installation:
+
+```bash
+synology-guru list                # List configured NAS devices
+synology-guru check               # Check default NAS
+synology-guru check home-nas      # Check specific NAS
+synology-guru check --all         # Check all NAS devices
+```
+
 ### Multi-Agent Architecture
 
 | Agent | Responsibility |
@@ -35,7 +46,14 @@ Synology Guru is an automated monitoring solution that uses specialized agents t
 ### Package Management
 
 - **Update Detection**: Identifies outdated packages from Package Center
-- **Automated Updates**: Programmatic package upgrades via SPK upload
+- **Interactive Upgrades**: Upgrade packages with confirmation prompts
+- **Automated Reports**: Generate and email reports after upgrades
+
+```bash
+synology-guru upgrade             # Upgrade with confirmation
+synology-guru upgrade home-nas    # Upgrade specific NAS
+synology-guru upgrade -y          # Upgrade without prompts
+```
 
 ## Installation
 
@@ -64,22 +82,55 @@ source venv/bin/activate  # Linux/Mac
 pip install -e .
 ```
 
-4. Configure environment:
-```bash
-cp .env.example .env
-# Edit .env with your Synology credentials
-```
+4. Configure your NAS devices (see Configuration below)
 
 5. Run:
 ```bash
-synology-guru
-# or
-python -m src.orchestrator.main
+synology-guru check
 ```
 
 ## Configuration
 
-Create a `.env` file with the following settings:
+### Option 1: YAML Configuration (Multi-NAS)
+
+Create `config/nas.yaml` for multiple NAS devices:
+
+```yaml
+# Default NAS to use when no name is specified
+default: home-nas
+
+# NAS devices configuration
+nas:
+  home-nas:
+    host: 192.168.1.100
+    port: 5001
+    https: true
+    username: ${SYNOLOGY_USERNAME}
+    password: ${SYNOLOGY_PASSWORD}
+
+  office-nas:
+    host: office.synology.me
+    port: 5001
+    https: true
+    username: ${OFFICE_USER}
+    password: ${OFFICE_PASS}
+
+# Email notification settings (optional)
+email:
+  smtp_host: smtp.office365.com
+  smtp_port: 587
+  username: ${EMAIL_USERNAME}
+  password: ${EMAIL_PASSWORD}
+  from_addr: synology@example.com
+  to_addr: admin@example.com
+  use_tls: true
+```
+
+Environment variables can be used with `${VAR}` or `${VAR:-default}` syntax.
+
+### Option 2: Environment Variables (Single NAS)
+
+Create a `.env` file for backward compatibility:
 
 ```env
 # Synology NAS Connection
@@ -89,6 +140,12 @@ SYNOLOGY_HTTPS=true
 SYNOLOGY_USERNAME=admin
 SYNOLOGY_PASSWORD=your_password
 
+# Additional NAS (optional)
+HOME_NAS_HOST=192.168.1.100
+HOME_NAS_PORT=5001
+HOME_NAS_USERNAME=admin
+HOME_NAS_PASSWORD=your_password
+
 # Email Notifications (optional)
 EMAIL_SMTP_HOST=smtp.office365.com
 EMAIL_SMTP_PORT=587
@@ -97,6 +154,38 @@ EMAIL_PASSWORD=your_app_password
 EMAIL_FROM=your@email.com
 EMAIL_TO=recipient@email.com
 EMAIL_USE_TLS=true
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `synology-guru list` | List all configured NAS devices |
+| `synology-guru check [NAS]` | Check health and generate report |
+| `synology-guru check --all` | Check all configured NAS devices |
+| `synology-guru upgrade [NAS]` | Upgrade packages with confirmation |
+| `synology-guru upgrade -y` | Upgrade all packages without prompts |
+| `synology-guru learning [NAS]` | Show learning status and patterns |
+
+## Docker Support
+
+### Build Image
+
+```bash
+docker build -t synology-guru .
+```
+
+### Run with Docker
+
+```bash
+docker run --rm --env-file .env synology-guru check
+docker run --rm --env-file .env synology-guru upgrade -y
+```
+
+### Docker Compose
+
+```bash
+docker-compose run synology-guru check --all
 ```
 
 ## Alert Priority Levels
@@ -115,7 +204,7 @@ EMAIL_USE_TLS=true
 synology-guru/
 ├── src/
 │   ├── orchestrator/      # Main orchestrator
-│   │   ├── main.py        # Entry point
+│   │   ├── main.py        # CLI entry point (Typer)
 │   │   ├── orchestrator.py
 │   │   └── report.py      # HTML report generator
 │   ├── agents/            # Specialized agents
@@ -127,6 +216,9 @@ synology-guru/
 │   │   ├── updates/
 │   │   ├── storage/
 │   │   └── disks/
+│   ├── config/            # Configuration module
+│   │   ├── models.py      # NASConfig, EmailConfig, AppConfig
+│   │   └── loader.py      # YAML/env configuration loader
 │   ├── memory/            # Learning system
 │   │   ├── models.py      # Observation, Baseline, Pattern
 │   │   └── store.py       # Persistent memory store
@@ -134,7 +226,17 @@ synology-guru/
 │   │   └── client.py
 │   └── notifications/     # Notification services
 │       └── email.py
-├── data/                  # Runtime data (auto-generated)
+├── config/
+│   └── nas.yaml.example   # Example multi-NAS configuration
+├── data/                  # Runtime data (per-NAS)
+│   ├── home-nas/
+│   │   ├── observations.json
+│   │   ├── baselines.json
+│   │   ├── patterns.json
+│   │   └── reports/
+│   └── office-nas/
+├── Dockerfile
+├── docker-compose.yml
 ├── .env.example
 ├── pyproject.toml
 └── README.md
@@ -166,9 +268,11 @@ The HTML report includes:
 ## Tech Stack
 
 - **Language**: Python 3.10+
+- **CLI Framework**: Typer
 - **HTTP Client**: httpx (async)
 - **Validation**: Pydantic
 - **CLI Output**: Rich
+- **Configuration**: PyYAML
 - **Persistence**: JSON (learning data)
 
 ## License
