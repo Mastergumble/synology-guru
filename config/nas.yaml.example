@@ -1,0 +1,47 @@
+# Synology Guru - Multi-NAS Configuration
+#
+# Copy this file to nas.yaml and configure your NAS devices.
+# Environment variables can be used with ${VAR} or ${VAR:-default} syntax.
+#
+# If this file doesn't exist, the system falls back to .env for backward compatibility.
+
+# Default NAS to use when no name is specified
+default: home-nas
+
+# NAS devices configuration
+nas:
+  home-nas:
+    host: 192.168.1.100
+    port: 5001
+    https: true
+    username: ${SYNOLOGY_USERNAME}
+    password: ${SYNOLOGY_PASSWORD}
+
+  # Example: Add more NAS devices
+  # office-nas:
+  #   host: office.local
+  #   port: 5001
+  #   https: true
+  #   username: ${OFFICE_USER}
+  #   password: ${OFFICE_PASS}
+
+  # backup-nas:
+  #   host: 10.0.0.50
+  #   port: 5000
+  #   https: false
+  #   username: ${BACKUP_USER}
+  #   password: ${BACKUP_PASS}
+
+# Email notification settings (optional)
+# email:
+#   smtp_host: smtp.gmail.com
+#   smtp_port: 587
+#   username: ${EMAIL_USERNAME}
+#   password: ${EMAIL_PASSWORD}
+#   from_addr: synology-guru@example.com
+#   to_addr: admin@example.com
+#   use_tls: true
+
+# Data directory for learning data and reports (default: data/)
+# Each NAS will have its own subdirectory: data/{nas-name}/
+# data_dir: data
