@@ -4,7 +4,15 @@ A multi-agent system for intelligent monitoring and management of Synology NAS d
 
 ## Overview
 
-Synology Guru is an automated monitoring solution that uses specialized agents to continuously analyze your Synology NAS health, security, storage, and more. It learns from your system's behavior to establish baselines and detect anomalies.
+Synology Guru is an intelligent, multi-agent monitoring system for Synology NAS devices. It uses six specialized agents to continuously analyze system health, security, storage, backups, logs, and updates. The system learns from your NAS behavior to establish baselines, detect anomalies, and predict potential issues before they become critical.
+
+**Key capabilities:**
+- Monitor multiple NAS devices from a single installation
+- Six specialized agents working in parallel
+- Self-learning baseline establishment and anomaly detection
+- Automated HTML reports with email delivery
+- Interactive package management and upgrades
+- Docker support for easy deployment
 
 ## Features
 
@@ -212,7 +220,7 @@ synology-guru/
 │   │   ├── learning.py    # LearningAgent with memory
 │   │   ├── backup/
 │   │   ├── security/
-│   │   ├── logs/
+│   │   ├── logs/          # Log analysis and anomaly detection
 │   │   ├── updates/
 │   │   ├── storage/
 │   │   └── disks/
@@ -253,6 +261,7 @@ The Synology API client supports:
 - **Packages**: List, check updates, and upgrade packages
 - **Security**: Connection logs, security scan results
 - **Backup**: Hyper Backup task monitoring
+- **Logs**: System log retrieval and analysis
 
 ## Sample Report
 
@@ -262,6 +271,7 @@ The HTML report includes:
 - **Updates**: DSM status and pending package updates
 - **Alerts**: Priority-sorted issues requiring attention
 - **Storage**: Volume usage with visual progress bars
+- **Logs**: Recent errors and anomalies detected by the Logs Agent
 - **Learning System**: Agent statistics and learned baselines
 - **Baselines**: Temperature, disk health, and security metrics
 
@@ -287,3 +297,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - Synology DSM Web API
 - Built with assistance from Claude (Anthropic)
+
