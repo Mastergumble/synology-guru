@@ -12,7 +12,7 @@ Synology Guru is an intelligent, multi-agent monitoring system for Synology NAS 
 - Self-learning baseline establishment and anomaly detection
 - Automated HTML reports with email delivery
 - Interactive package management and upgrades
-- Docker support for easy deployment
+- Direct installation on any Python 3.10+ system
 
 ## Features
 
@@ -175,27 +175,6 @@ EMAIL_USE_TLS=true
 | `synology-guru upgrade -y` | Upgrade all packages without prompts |
 | `synology-guru learning [NAS]` | Show learning status and patterns |
 
-## Docker Support
-
-### Build Image
-
-```bash
-docker build -t synology-guru .
-```
-
-### Run with Docker
-
-```bash
-docker run --rm --env-file .env synology-guru check
-docker run --rm --env-file .env synology-guru upgrade -y
-```
-
-### Docker Compose
-
-```bash
-docker-compose run synology-guru check --all
-```
-
 ## Alert Priority Levels
 
 | Priority | Level | Description | Examples |
@@ -243,8 +222,6 @@ synology-guru/
 │   │   ├── patterns.json
 │   │   └── reports/
 │   └── office-nas/
-├── Dockerfile
-├── docker-compose.yml
 ├── .env.example
 ├── pyproject.toml
 └── README.md

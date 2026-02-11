@@ -325,7 +325,7 @@ async def check_single_nas(
             else:
                 subject += "🟢 OK"
 
-            if email_notifier.send(subject, html_report, text_report):
+            if email_notifier.send(subject, html_report, text_report, attachment_path=report_file):
                 console.print("[green]✓ Email enviado com sucesso![/green]")
             else:
                 console.print("[red]✗ Falha ao enviar email[/red]")
@@ -709,7 +709,7 @@ async def generate_upgrade_report(
             console.print("[dim]A enviar email...[/dim]")
             subject = f"Synology Guru - {nas_name} - Pacotes Atualizados ({len(upgraded_packages)})"
 
-            if email_notifier.send(subject, html_report, text_report):
+            if email_notifier.send(subject, html_report, text_report, attachment_path=report_file):
                 console.print("[green]✓ Email enviado com sucesso![/green]")
             else:
                 console.print("[red]✗ Falha ao enviar email[/red]")

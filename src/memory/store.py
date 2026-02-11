@@ -75,7 +75,7 @@ class MemoryStore:
         if self._feedback_file.exists():
             try:
                 data = json.loads(self._feedback_file.read_text())
-                self._feedback = [UserFeedback(**f) for f in data]
+                self._feedback = [UserFeedback.from_dict(f) for f in data]
             except (json.JSONDecodeError, KeyError):
                 self._feedback = []
 

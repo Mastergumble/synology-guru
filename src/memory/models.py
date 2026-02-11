@@ -152,3 +152,14 @@ class UserFeedback:
             "context": self.context,
             "timestamp": self.timestamp.isoformat(),
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "UserFeedback":
+        """Create from dictionary."""
+        return cls(
+            agent=data["agent"],
+            alert_type=data["alert_type"],
+            feedback=data["feedback"],
+            context=data.get("context", {}),
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+        )

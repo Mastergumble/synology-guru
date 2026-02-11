@@ -2,9 +2,12 @@
 
 import smtplib
 import ssl
+from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email import encoders
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -27,26 +30,33 @@ class EmailNotifier:
         """Initialize email notifier."""
         self.config = config
 
-    def send(self, subject: str, body_html: str, body_text: str | None = None) -> bool:
+    def send(
+        self,
+        subject: str,
+        body_html: str,
+        body_text: str | None = None,
+        attachment_path: Path | None = None,
+    ) -> bool:
         """Send an email notification.
 
         Args:
             subject: Email subject
             body_html: HTML body content
             body_text: Plain text body (optional, derived from HTML if not provided)
+            attachment_path: Optional path to a file to attach
 
         Returns:
             True if email sent successfully, False otherwise
         """
         try:
-            msg = MIMEMultipart("alternative")
+            # Use mixed for attachments, alternative for body parts
+            msg = MIMEMultipart("mixed")
             msg["Subject"] = subject
             msg["From"] = self.config.from_addr
             msg["To"] = self.config.to_addr
 
             # Plain text version
             if body_text is None:
-                # Simple HTML to text conversion
                 import re
                 body_text = re.sub(r'<[^>]+>', '', body_html)
                 body_text = body_text.replace('&nbsp;', ' ')
@@ -54,11 +64,22 @@ class EmailNotifier:
                 body_text = body_text.replace('&gt;', '>')
                 body_text = body_text.replace('&amp;', '&')
 
-            part1 = MIMEText(body_text, "plain", "utf-8")
-            part2 = MIMEText(body_html, "html", "utf-8")
+            # Body as alternative (text + html)
+            body_part = MIMEMultipart("alternative")
+            body_part.attach(MIMEText(body_text, "plain", "utf-8"))
+            body_part.attach(MIMEText(body_html, "html", "utf-8"))
+            msg.attach(body_part)
 
-            msg.attach(part1)
-            msg.attach(part2)
+            # Attachment
+            if attachment_path and attachment_path.exists():
+                attachment = MIMEBase("application", "octet-stream")
+                attachment.set_payload(attachment_path.read_bytes())
+                encoders.encode_base64(attachment)
+                attachment.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename={attachment_path.name}",
+                )
+                msg.attach(attachment)
 
             # Send email
             if self.config.use_tls:
